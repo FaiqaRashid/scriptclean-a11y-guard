@@ -1,6 +1,6 @@
 # ScriptClean: A11y Guard
 [![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
-[![IBM Bob Hackathon 2026](https://img.shields.io/badge/Hackathon-IBM%20Bob%202026-ff69b4)](https://compete.052601.watsonx-challenge.ibm.com/competitions/bobdevday)
+[![IBM Bob Hackathon 2026](https://img.shields.io/badge/Hackathon-IBM%20Bob%202026-ff69b4)](https://developer.ibm.com/hackathons/)
 [![Powered by IBM Bob](https://img.shields.io/badge/AI-IBM%20Bob-00ced1)](https://www.ibm.com/)
 [![WCAG 2.1](https://img.shields.io/badge/Standard-WCAG%202.1-ff8c00)](https://www.w3.org/WAI/WCAG21/quickref/)
 
