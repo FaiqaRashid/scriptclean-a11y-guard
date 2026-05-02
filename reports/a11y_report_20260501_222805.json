@@ -1,0 +1,150 @@
+{
+  "bob_insights": {
+    "estimated_fix_time": "43 minutes",
+    "impact_score": 85,
+    "priority_fix": {
+      "file": "bad_images.php",
+      "issue": "Missing Alt Text",
+      "line": 75,
+      "reason": "This issue has the highest impact on accessibility"
+    }
+  },
+  "file_analyzed": "bad_images.php",
+  "issues": [
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/avatar-admin.jpg\" style=\"width:32px;height:32px;border-radius:50%;\">",
+      "desc": "Image \"assets/avatar-admin.jpg\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "bad_images.php",
+      "fix": "<img src=\"assets/avatar-admin.jpg\" style=\"width:32px;height:32px;border-radius:50%;\" alt=\"Avatar Admin\">",
+      "id": 1,
+      "line": 75,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/revenue-chart-sparkline.png\" style=\"width:100%;margin-top:.5rem;\">",
+      "desc": "Image \"assets/revenue-chart-sparkline.png\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "bad_images.php",
+      "fix": "<img src=\"assets/revenue-chart-sparkline.png\" style=\"width:100%;margin-top:.5rem;\" alt=\"Revenue Chart Sparkline\">",
+      "id": 2,
+      "line": 96,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/conversion-chart.png\" style=\"width:100%;margin-top:.5rem;\">",
+      "desc": "Image \"assets/conversion-chart.png\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "bad_images.php",
+      "fix": "<img src=\"assets/conversion-chart.png\" style=\"width:100%;margin-top:.5rem;\" alt=\"Conversion Chart\">",
+      "id": 3,
+      "line": 107,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/section-divider.svg\" style=\"width:100%;height:8px;display:block;margin:.5rem 0;\">",
+      "desc": "Image \"assets/section-divider.svg\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "bad_images.php",
+      "fix": "<img src=\"assets/section-divider.svg\" style=\"width:100%;height:8px;display:block;margin:.5rem 0;\" alt=\"Section Divider\">",
+      "id": 4,
+      "line": 151,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/products/<?php echo $product['img']; ?>",
+      "desc": "Image \"assets/products/<?php echo $product[\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "bad_images.php",
+      "fix": "<img src=\"assets/products/<?php echo $product['img']; ? alt=\"<?Php Echo $Product[\">",
+      "id": 5,
+      "line": 181,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<div class=\"main-content\">",
+      "desc": "No <main> landmark found. Screen readers use landmarks to navigate page sections.",
+      "file": "bad_images.php",
+      "fix": "<main class=\"main-content\" role=\"main\">",
+      "id": 6,
+      "line": 1,
+      "severity": "warning",
+      "type": "Role & Structure",
+      "wcag": "WCAG 1.3.1"
+    },
+    {
+      "applied": false,
+      "broken": "<input type=\"text\" id=\"product-search\" placeholder=\"Search by name, SKU, or category...\" onkeyup=\"filterProducts(this.value)\">",
+      "desc": "Input field (text) has no associated label or aria-label.",
+      "file": "bad_images.php",
+      "fix": "<input aria-label=\"Text input\" type=\"text\" id=\"product-search\" placeholder=\"Search by name, SKU, or category...\" onkeyup=\"filterProducts(this.value)\">",
+      "id": 7,
+      "line": 124,
+      "severity": "critical",
+      "type": "Missing ARIA Label",
+      "wcag": "WCAG 4.1.2"
+    },
+    {
+      "applied": false,
+      "broken": "<input type=\"file\" id=\"upload-<?php echo $product['id']; ?>",
+      "desc": "Input field (file) has no associated label or aria-label.",
+      "file": "bad_images.php",
+      "fix": "<input aria-label=\"File input\" type=\"file\" id=\"upload-<?php echo $product['id']; ?>",
+      "id": 8,
+      "line": 201,
+      "severity": "critical",
+      "type": "Missing ARIA Label",
+      "wcag": "WCAG 4.1.2"
+    },
+    {
+      "applied": false,
+      "broken": "<input type=\"password\" id=\"admin-override\" placeholder=\"Admin password to confirm\">",
+      "desc": "Input field (password) has no associated label or aria-label.",
+      "file": "bad_images.php",
+      "fix": "<input aria-label=\"Password input\" type=\"password\" id=\"admin-override\" placeholder=\"Admin password to confirm\">",
+      "id": 9,
+      "line": 291,
+      "severity": "critical",
+      "type": "Missing ARIA Label",
+      "wcag": "WCAG 4.1.2"
+    }
+  ],
+  "powered_by": "IBM Bob",
+  "recommendations": [
+    {
+      "action": "Fix 8 critical accessibility issues immediately",
+      "impact": "These issues prevent users with disabilities from accessing content",
+      "priority": "HIGH"
+    },
+    {
+      "action": "Address 1 warning-level issues",
+      "impact": "These issues create barriers but have workarounds",
+      "priority": "MEDIUM"
+    }
+  ],
+  "scan_date": "2026-05-01T22:27:59.739404",
+  "summary": {
+    "critical": 8,
+    "files_scanned": 1,
+    "info": 0,
+    "total_issues": 9,
+    "warning": 1
+  },
+  "tool": "ScriptClean A11y Guard",
+  "wcag_compliance": {
+    "level_a": 55,
+    "level_aa": 100,
+    "level_aaa": 100
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "bob_insights": {
+    "estimated_fix_time": "23 minutes",
+    "impact_score": 45,
+    "priority_fix": {
+      "file": "broken_nav.html",
+      "issue": "Missing Alt Text",
+      "line": 64,
+      "reason": "This critical issue has the highest impact on accessibility"
+    }
+  },
+  "file_analyzed": "broken_nav.html",
+  "issues": [
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/travelio-logo-final-v3.png\" class=\"nav-logo\" width=\"140\">",
+      "desc": "Image \"assets/travelio-logo-final-v3.png\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "broken_nav.html",
+      "fix": "<img src=\"assets/travelio-logo-final-v3.png\" class=\"nav-logo\" width=\"140\" alt=\"Travelio Logo Final V3\">",
+      "id": 1,
+      "line": 64,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/hero-santorini.jpg\">",
+      "desc": "Image \"assets/hero-santorini.jpg\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "broken_nav.html",
+      "fix": "<img src=\"assets/hero-santorini.jpg\" alt=\"Hero Santorini\">",
+      "id": 2,
+      "line": 109,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/bali.jpg\" style=\"width:100%;height:180px;object-fit:cover;\">",
+      "desc": "Image \"assets/bali.jpg\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "broken_nav.html",
+      "fix": "<img src=\"assets/bali.jpg\" style=\"width:100%;height:180px;object-fit:cover;\" alt=\"Bali\">",
+      "id": 3,
+      "line": 148,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    },
+    {
+      "applied": false,
+      "broken": "<h4>",
+      "desc": "Heading hierarchy jumps from H2 to H4, skipping levels.",
+      "file": "broken_nav.html",
+      "fix": "<h3>",
+      "id": 4,
+      "line": 139,
+      "severity": "warning",
+      "type": "Role & Structure",
+      "wcag": "WCAG 2.4.6"
+    },
+    {
+      "applied": false,
+      "broken": "<input type=\"email\" placeholder=\"Enter your email address\" id=\"newsletter-email\">",
+      "desc": "Input field (email) has no associated label or aria-label.",
+      "file": "broken_nav.html",
+      "fix": "<input aria-label=\"Email input\" type=\"email\" placeholder=\"Enter your email address\" id=\"newsletter-email\">",
+      "id": 5,
+      "line": 222,
+      "severity": "critical",
+      "type": "Missing ARIA Label",
+      "wcag": "WCAG 4.1.2"
+    }
+  ],
+  "powered_by": "IBM Bob",
+  "recommendations": [
+    {
+      "action": "Fix 4 critical accessibility issues immediately",
+      "impact": "These issues prevent users with disabilities from accessing content",
+      "priority": "HIGH"
+    },
+    {
+      "action": "Address 1 warning-level issues",
+      "impact": "These issues create barriers but have workarounds",
+      "priority": "MEDIUM"
+    }
+  ],
+  "scan_date": "2026-05-02T15:27:59.056035",
+  "summary": {
+    "critical": 4,
+    "files_scanned": 1,
+    "info": 0,
+    "total_issues": 5,
+    "warning": 1
+  },
+  "tool": "ScriptClean A11y Guard",
+  "wcag_compliance": {
+    "level_a": 75,
+    "level_aa": 100,
+    "level_aaa": 100
+  }
+}

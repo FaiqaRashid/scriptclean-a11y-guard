@@ -1,0 +1,49 @@
+{
+  "bob_insights": {
+    "estimated_fix_time": "5 minutes",
+    "impact_score": 10,
+    "priority_fix": {
+      "file": "new_card.php",
+      "issue": "Missing Alt Text",
+      "line": 3,
+      "reason": "This issue has the highest impact on accessibility"
+    }
+  },
+  "file_analyzed": "new_card.php",
+  "issues": [
+    {
+      "applied": false,
+      "broken": "<img src=\"assets/images/tech-update.jpg\" class=\"thumbnail\">",
+      "desc": "Image \"assets/images/tech-update.jpg\" has no alt attribute. Screen readers cannot convey this content to visually impaired users.",
+      "file": "new_card.php",
+      "fix": "<img src=\"assets/images/tech-update.jpg\" class=\"thumbnail\" alt=\"Tech Update\">",
+      "id": 1,
+      "line": 3,
+      "severity": "critical",
+      "type": "Missing Alt Text",
+      "wcag": "WCAG 1.1.1"
+    }
+  ],
+  "powered_by": "IBM Bob",
+  "recommendations": [
+    {
+      "action": "Fix 1 critical accessibility issues immediately",
+      "impact": "These issues prevent users with disabilities from accessing content",
+      "priority": "HIGH"
+    }
+  ],
+  "scan_date": "2026-05-02T12:00:37.401309",
+  "summary": {
+    "critical": 1,
+    "files_scanned": 1,
+    "info": 0,
+    "total_issues": 1,
+    "warning": 0
+  },
+  "tool": "ScriptClean A11y Guard",
+  "wcag_compliance": {
+    "level_a": 95,
+    "level_aa": 100,
+    "level_aaa": 100
+  }
+}

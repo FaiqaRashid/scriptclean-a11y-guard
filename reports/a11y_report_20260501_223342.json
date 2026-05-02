@@ -1,0 +1,44 @@
+{
+  "bob_insights": {
+    "estimated_fix_time": "3 minutes",
+    "impact_score": 5,
+    "priority_fix": null
+  },
+  "file_analyzed": "travello.html",
+  "issues": [
+    {
+      "applied": false,
+      "broken": "<h4>",
+      "desc": "Heading hierarchy jumps from H2 to H4, skipping levels.",
+      "file": "travello.html",
+      "fix": "<h3>",
+      "id": 1,
+      "line": 90,
+      "severity": "warning",
+      "type": "Role & Structure",
+      "wcag": "WCAG 2.4.6"
+    }
+  ],
+  "powered_by": "IBM Bob",
+  "recommendations": [
+    {
+      "action": "Address 1 warning-level issues",
+      "impact": "These issues create barriers but have workarounds",
+      "priority": "MEDIUM"
+    }
+  ],
+  "scan_date": "2026-05-01T22:33:36.599218",
+  "summary": {
+    "critical": 0,
+    "files_scanned": 1,
+    "info": 0,
+    "total_issues": 1,
+    "warning": 1
+  },
+  "tool": "ScriptClean A11y Guard",
+  "wcag_compliance": {
+    "level_a": 95,
+    "level_aa": 100,
+    "level_aaa": 100
+  }
+}
