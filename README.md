@@ -3,6 +3,7 @@
 ![IBM Powered](https://img.shields.io/badge/Powered%20by-IBM-blue?style=flat-square&logo=ibm)
 ![Hackathon 2026](https://img.shields.io/badge/Event-Hackathon%202026-orange?style=flat-square)
 ![License MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Watson AI](https://img.shields.io/badge/AI-IBM%20Watson-be95ff?style=flat-square)
 
 **AI-Powered Accessibility Auditor Built on IBM Bob**
 
