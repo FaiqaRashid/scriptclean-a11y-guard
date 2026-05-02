@@ -1,9 +1,10 @@
 # ScriptClean: A11y Guard
+[![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
+[![IBM Bob Hackathon 2026](https://img.shields.io/badge/Hackathon-IBM%20Bob%202026-ff69b4)](https://compete.052601.watsonx-challenge.ibm.com/competitions/bobdevday)
+[![Powered by IBM Bob](https://img.shields.io/badge/AI-IBM%20Bob-00ced1)](https://www.ibm.com/)
+[![WCAG 2.1](https://img.shields.io/badge/Standard-WCAG%202.1-ff8c00)](https://www.w3.org/WAI/WCAG21/quickref/)
 
-![IBM Powered](https://img.shields.io/badge/Powered%20by-IBM-blue?style=flat-square&logo=ibm)
-![Hackathon 2026](https://img.shields.io/badge/Event-Hackathon%202026-orange?style=flat-square)
-![License MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Watson AI](https://img.shields.io/badge/AI-IBM%20Watson-be95ff?style=flat-square)
+---
 
 **AI-Powered Accessibility Auditor Built on IBM Bob**
 
