@@ -107,6 +107,7 @@
             <div class="sc-stat warning"><div class="sc-stat-num" id="stat-warning">4</div><div class="sc-stat-label">Warnings</div></div>
             <div class="sc-stat good"><div class="sc-stat-num" id="stat-fixed">0</div><div class="sc-stat-label">Fixed</div></div>
             <div class="sc-stat"><div class="sc-stat-num" id="stat-files">3</div><div class="sc-stat-label">Files Scanned</div></div>
+            <div class="sc-stat"><div class="sc-stat-num" id="stat-score">100</div><div class="sc-stat-label">A11y Score <span id="score-delta" style="margin-left:6px;color:var(--ibm-green)">+0</span></div></div>
           </div>
     
           <div class="sc-filter-row">
@@ -120,8 +121,9 @@
           <div id="issue-list"></div>
     
           <div class="sc-export-row">
-            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" onclick="exportBobReport()">Generate PDF Report ↗</button>
+            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" onclick="exportBobReport()">Export JSON Report ↗</button>
             <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" onclick="showBobPriority()">Ask Bob for priority ↗</button>
+            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" onclick="downloadPatchedFiles()">Download patched files ↗</button>
           </div>
         </div>
     
