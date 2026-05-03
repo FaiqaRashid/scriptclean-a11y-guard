@@ -6,6 +6,14 @@ import json
 import re
 from datetime import datetime
 
+from dotenv import load_dotenv
+
+from watsonx_bob import enhance_issues_with_watsonx, watsonx_configured
+
+# Load server/.env before reading IBM_BOB_API_KEY (never log the raw key)
+load_dotenv(Path(__file__).resolve().parent / ".env")
+IBM_BOB_API_KEY = os.environ.get("IBM_BOB_API_KEY", "").strip()
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for client communication
 
@@ -44,25 +52,37 @@ class A11yScanner:
             'files_scanned': 0
         }
     
-    def scan_content(self, content, filename):
+    def scan_content(self, content, filename, enabled_checks=None):
         """Scan file content for accessibility issues"""
         self.issues = []
         lines = content.split('\n')
+        checks = enabled_checks or {
+            'missing_alt',
+            'missing_aria',
+            'role_structure',
+            'heading_hierarchy',
+            'form_labels'
+        }
         
         # Check for missing alt attributes on images
-        self._check_missing_alt(lines, filename)
+        if 'missing_alt' in checks:
+            self._check_missing_alt(lines, filename)
         
         # Check for missing ARIA labels on buttons/inputs
-        self._check_missing_aria_labels(lines, filename)
+        if 'missing_aria' in checks:
+            self._check_missing_aria_labels(lines, filename)
         
         # Check for role and structure issues
-        self._check_role_structure(lines, filename)
+        if 'role_structure' in checks:
+            self._check_role_structure(lines, filename)
         
         # Check for heading hierarchy
-        self._check_heading_hierarchy(lines, filename)
+        if 'heading_hierarchy' in checks:
+            self._check_heading_hierarchy(lines, filename)
         
         # Check for form labels
-        self._check_form_labels(lines, filename)
+        if 'form_labels' in checks:
+            self._check_form_labels(lines, filename)
         
         self.stats['files_scanned'] += 1
         return self.issues
@@ -88,20 +108,64 @@ class A11yScanner:
                         'line': i,
                         'desc': f'Image "{src}" has no alt attribute. Screen readers cannot convey this content to visually impaired users.',
                         'broken': img_tag.strip(),
-                        'fix': self._generate_alt_fix(img_tag, src),
+                        'broken_full': img_tag.strip(),
+                        'fix': self._generate_alt_fix(img_tag, src, lines, i),
                         'wcag': 'WCAG 1.1.1',
                         'applied': False
                     })
                     self.stats['critical'] += 1
     
-    def _generate_alt_fix(self, img_tag, src):
-        """Generate contextual alt text fix"""
-        # Smart alt text based on filename
-        filename = Path(src).stem
-        alt_text = filename.replace('-', ' ').replace('_', ' ').title()
-        
-        # Insert alt attribute before closing >
-        return img_tag[:-1] + f' alt="{alt_text}">'
+    def _generate_alt_fix(self, img_tag, src, lines, line_num):
+        """
+        Context-aware alt text (WCAG 1.1.1): use nearby markup + filename,
+        not generic 'image' or raw filename tokens like 'Final V3'.
+        """
+        line_idx = line_num - 1
+        window = lines[max(0, line_idx - 5): line_idx + 1]
+        context = self._strip_html_comments(' '.join(window)).lower()
+        stem = Path(src).stem
+        human = re.sub(r'[-_]+', ' ', stem).strip()
+        src_l = src.lower()
+
+        def inject(alt_text):
+            esc = alt_text.replace('"', '&quot;')
+            return img_tag[:-1] + f' alt="{esc}">'
+
+        # Decorative / spacer graphics — empty alt, not missing alt
+        if re.search(r'\b(decorative|divider|spacer)\b|spacer\.(gif|png|webp)', context + src_l):
+            return img_tag[:-1] + ' alt="">'
+
+        # Logo in nav / header: short brand + purpose (reduces cognitive load vs. filename)
+        if 'logo' in src_l or 'logo' in context or (
+            re.search(r'<nav\b', context, re.I) and 'hero' not in context
+        ):
+            brand = human
+            if 'logo' in human.lower():
+                brand = re.sub(r'\s*logo.*$', '', human, flags=re.I).strip()
+            brand = re.sub(r'\s*(final|v\d+|master)\s*$', '', brand, flags=re.I).strip()
+            parts = brand.split()
+            brand_short = parts[0].title() if parts else 'Site'
+            if len(parts) > 1 and parts[0].lower() == parts[1].lower():
+                brand_short = parts[0].title()
+            return inject(f'{brand_short} - home')
+
+        # Hero / banner imagery: describe role + cue from filename (not file slug as title case)
+        if 'hero' in context or 'hero' in src_l or 'banner' in context:
+            place = re.sub(r'^(hero|banner)[\s-]+', '', human, flags=re.I).strip() or human
+            place = re.sub(r'\s*(hero|banner)\s*$', '', place, flags=re.I).strip()
+            return inject(f'Photo: {place.title()}')
+
+        # Cards / destinations: concise content label
+        if re.search(r'\b(card|destination|package|gallery|thumb)\b', context):
+            return inject(f'{human.title()}')
+
+        # Default: short descriptive phrase, not Title(slug)
+        return inject(f'Illustration: {human.title()}')
+
+    @staticmethod
+    def _strip_html_comments(fragment):
+        """Ignore <!-- --> so keyword hints in audit comments do not skew fixes."""
+        return re.sub(r'<!--.*?-->', ' ', fragment, flags=re.DOTALL)
     
     def _check_missing_aria_labels(self, lines, filename):
         """Check for buttons/inputs without accessible labels"""
@@ -125,17 +189,64 @@ class A11yScanner:
                         'line': i,
                         'desc': f'Button with icon has no aria-label. Screen reader users cannot determine its purpose.',
                         'broken': button[:80] + '...' if len(button) > 80 else button,
-                        'fix': self._generate_aria_fix(button, context),
+                        'broken_full': button,
+                        'fix': self._generate_aria_fix(button, context or ''),
                         'wcag': 'WCAG 4.1.2',
                         'applied': False
                     })
                     self.stats['critical'] += 1
     
     def _generate_aria_fix(self, element, context):
-        """Generate aria-label fix"""
-        label = context.replace('()', '').replace('open', 'Open').replace('close', 'Close')
-        return element.replace('<button', f'<button aria-label="{label}"', 1)
-    
+        """Icon-only buttons: map handler names to short, predictable verbs (WCAG 4.1.2)."""
+        ctx = (context or '').replace('()', '').strip()
+        low = ctx.lower()
+        pairs = [
+            (r'togglemenu|opennav|openmenu|hamburger', 'Open navigation menu'),
+            (r'opensearch|showsearch', 'Search'),
+            (r'closesidebar|closemenu|closenav', 'Close menu'),
+            (r'openfilters?|showfilters?', 'Filter options'),
+            (r'subscribe|signup', 'Subscribe'),
+            (r'scrolltopackages|scrolltobook', 'Book your trip'),
+            (r'addtocart|checkout', 'Continue to checkout'),
+        ]
+        for pattern, label in pairs:
+            if re.search(pattern, low):
+                esc = label.replace('"', '&quot;')
+                return element.replace('<button', f'<button aria-label="{esc}"', 1)
+        # Readable fallback from camelCase handler name
+        words = re.sub(r'([a-z])([A-Z])', r'\1 \2', ctx).replace('_', ' ').strip()
+        fallback = words.title() if words else 'Action'
+        esc = fallback.replace('"', '&quot;')
+        return element.replace('<button', f'<button aria-label="{esc}"', 1)
+
+    def _generate_form_input_fix(self, input_tag, lines, line_num):
+        """Prefer purpose-driven aria-labels from id/placeholder/section context."""
+        line_idx = line_num - 1
+        raw_block = ' '.join(lines[max(0, line_idx - 4): line_idx + 1])
+        block = self._strip_html_comments(raw_block).lower()
+        id_m = re.search(r'\bid\s*=\s*["\']([^"\']+)["\']', input_tag, re.I)
+        pid = id_m.group(1).lower() if id_m else ''
+        ph_m = re.search(r'\bplaceholder\s*=\s*["\']([^"\']+)["\']', input_tag, re.I)
+        placeholder = ph_m.group(1) if ph_m else ''
+
+        if 'search' in pid or 'search' in block or re.search(r'type\s*=\s*["\']search["\']', input_tag, re.I):
+            label = 'Search products' if 'product' in block else 'Search'
+        elif 'newsletter' in pid or 'newsletter' in block:
+            label = 'Email for newsletter'
+        elif 'email' in pid or (re.search(r'type\s*=\s*["\']email["\']', input_tag, re.I) and 'news' in block):
+            label = 'Email for newsletter' if 'news' in block else 'Email'
+        elif 'password' in pid or re.search(r'type\s*=\s*["\']password["\']', input_tag, re.I):
+            label = 'Password'
+        elif placeholder and len(placeholder) < 72:
+            label = placeholder.rstrip('.').strip()
+        else:
+            t_m = re.search(r'type\s*=\s*["\']([^"\']+)["\']', input_tag, re.I)
+            tv = t_m.group(1) if t_m else 'text'
+            label = f'{tv.title()}'
+
+        esc = label.replace('"', '&quot;')
+        return input_tag.replace('<input', f'<input aria-label="{esc}"', 1)
+
     def _check_role_structure(self, lines, filename):
         """Check for proper landmark roles"""
         content = '\n'.join(lines)
@@ -151,6 +262,7 @@ class A11yScanner:
                     'line': 1,
                     'desc': 'No <main> landmark found. Screen readers use landmarks to navigate page sections.',
                     'broken': '<div class="main-content">',
+                    'broken_full': '<div class="main-content">',
                     'fix': '<main class="main-content" role="main">',
                     'wcag': 'WCAG 1.3.1',
                     'applied': False
@@ -178,6 +290,7 @@ class A11yScanner:
                     'line': next_line,
                     'desc': f'Heading hierarchy jumps from H{current_level} to H{next_level}, skipping levels.',
                     'broken': f'<h{next_level}>',
+                    'broken_full': f'<h{next_level}>',
                     'fix': f'<h{current_level + 1}>',
                     'wcag': 'WCAG 2.4.6',
                     'applied': False
@@ -208,7 +321,8 @@ class A11yScanner:
                             'line': i,
                             'desc': f'Input field ({type_val}) has no associated label or aria-label.',
                             'broken': input_tag.strip(),
-                            'fix': input_tag.replace('<input', f'<input aria-label="{type_val.title()} input"', 1),
+                            'broken_full': input_tag.strip(),
+                            'fix': self._generate_form_input_fix(input_tag, lines, i),
                             'wcag': 'WCAG 4.1.2',
                             'applied': False
                         })
@@ -217,6 +331,11 @@ class A11yScanner:
 # ============================================================
 # API ENDPOINTS
 # ============================================================
+
+def _finalize_issues_with_bob(code: str, filename: str, issues: list) -> tuple[list, dict]:
+    """Apply watsonx refinement when IBM_BOB_API_KEY + WATSONX_PROJECT_ID are set."""
+    return enhance_issues_with_watsonx(issues, code, filename)
+
 
 @app.route('/api/scan', methods=['POST'])
 def scan_code():
@@ -241,19 +360,26 @@ def scan_code():
                 'message': 'No code provided'
             }), 400
         
+        enabled_checks = set(data.get('checks', [])) if isinstance(data.get('checks'), list) else None
+
         # Initialize scanner
         scanner = A11yScanner()
-        issues = scanner.scan_content(code, filename)
-        
+        issues = scanner.scan_content(code, filename, enabled_checks=enabled_checks)
+        issues, watsonx_meta = _finalize_issues_with_bob(code, filename, issues)
+
         # Generate IBM Bob report
         bob_report = generate_bob_report(issues, scanner.stats, filename)
-        
+        if watsonx_meta:
+            bob_report.setdefault('bob_insights', {})['watsonx'] = watsonx_meta
+
         return jsonify({
             'status': 'success',
             'issues': issues,
             'stats': scanner.stats,
             'bob_report': bob_report,
-            'timestamp': datetime.now().isoformat()
+            'score': calculate_accessibility_score(scanner.stats),
+            'timestamp': datetime.now().isoformat(),
+            'watsonx': watsonx_meta,
         })
         
     except Exception as e:
@@ -333,21 +459,28 @@ def scan_file():
         with open(file_path, 'r', encoding='utf-8') as f:
             code = f.read()
         
+        enabled_checks = set(data.get('checks', [])) if isinstance(data.get('checks'), list) else None
+
         # Scan the content
         scanner = A11yScanner()
-        issues = scanner.scan_content(code, file_path.name)
-        
+        issues = scanner.scan_content(code, file_path.name, enabled_checks=enabled_checks)
+        issues, watsonx_meta = _finalize_issues_with_bob(code, file_path.name, issues)
+
         # Generate IBM Bob report
         bob_report = generate_bob_report(issues, scanner.stats, file_path.name)
-        
+        if watsonx_meta:
+            bob_report.setdefault('bob_insights', {})['watsonx'] = watsonx_meta
+
         return jsonify({
             'status': 'success',
             'issues': issues,
             'stats': scanner.stats,
             'bob_report': bob_report,
+            'score': calculate_accessibility_score(scanner.stats),
             'filename': file_path.name,
             'full_path': str(file_path),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'watsonx': watsonx_meta,
         })
         
     except Exception as e:
@@ -358,6 +491,133 @@ def scan_file():
                 'error': True,
                 'details': f'File scan failed: {str(e)}'
             }
+        }), 500
+
+@app.route('/api/scan-batch', methods=['POST'])
+def scan_batch():
+    """
+    Scan multiple files in one request and return aggregated stats.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid JSON data'
+            }), 400
+
+        files = data.get('files', [])
+        if not isinstance(files, list) or not files:
+            return jsonify({
+                'status': 'error',
+                'message': 'No files provided'
+            }), 400
+
+        enabled_checks = set(data.get('checks', [])) if isinstance(data.get('checks'), list) else None
+
+        all_issues = []
+        per_file_results = []
+        aggregate_stats = {'critical': 0, 'warning': 0, 'info': 0, 'files_scanned': 0}
+        watsonx_per_file = []
+
+        for file_data in files:
+            code = file_data.get('code', '')
+            filename = file_data.get('filename', 'uploaded_file.html')
+            if not code:
+                continue
+
+            scanner = A11yScanner()
+            issues = scanner.scan_content(code, filename, enabled_checks=enabled_checks)
+            issues, wx_meta = _finalize_issues_with_bob(code, filename, issues)
+            watsonx_per_file.append({'filename': filename, **wx_meta})
+
+            all_issues.extend(issues)
+            aggregate_stats['critical'] += scanner.stats['critical']
+            aggregate_stats['warning'] += scanner.stats['warning']
+            aggregate_stats['info'] += scanner.stats['info']
+            aggregate_stats['files_scanned'] += scanner.stats['files_scanned']
+
+            per_file_results.append({
+                'filename': filename,
+                'issue_count': len(issues),
+                'critical': scanner.stats['critical'],
+                'warning': scanner.stats['warning'],
+                'issues': issues
+            })
+
+        worst_files = sorted(
+            per_file_results,
+            key=lambda f: (f['critical'] * 10) + (f['warning'] * 5) + f['issue_count'],
+            reverse=True
+        )[:5]
+
+        bob_report = generate_bob_report(all_issues, aggregate_stats, 'batch_scan')
+        if watsonx_per_file:
+            bob_report.setdefault('bob_insights', {})['watsonx_batch'] = watsonx_per_file
+
+        return jsonify({
+            'status': 'success',
+            'issues': all_issues,
+            'stats': aggregate_stats,
+            'per_file_results': per_file_results,
+            'worst_files': worst_files,
+            'bob_report': bob_report,
+            'score': calculate_accessibility_score(aggregate_stats),
+            'timestamp': datetime.now().isoformat(),
+            'watsonx': {'per_file': watsonx_per_file},
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/apply-fixes', methods=['POST'])
+def apply_fixes():
+    """
+    Apply generated fixes to provided file content and return patched text.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid JSON data'
+            }), 400
+
+        files = data.get('files', [])
+        if not isinstance(files, list) or not files:
+            return jsonify({
+                'status': 'error',
+                'message': 'No files provided'
+            }), 400
+
+        patched_files = []
+        total_applied = 0
+
+        for file_data in files:
+            filename = file_data.get('filename', 'unknown_file.html')
+            content = file_data.get('content', '')
+            issues = file_data.get('issues', [])
+
+            patched_content, applied_count = apply_issue_fixes_to_content(content, issues)
+            total_applied += applied_count
+            patched_files.append({
+                'filename': filename,
+                'content': patched_content,
+                'applied_count': applied_count
+            })
+
+        return jsonify({
+            'status': 'success',
+            'patched_files': patched_files,
+            'total_applied': total_applied
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
         }), 500
 
 @app.route('/api/samples', methods=['GET'])
@@ -523,6 +783,26 @@ def calculate_impact_score(stats):
     score = (stats['critical'] * 10) + (stats['warning'] * 5) + (stats['info'] * 1)
     return min(score, 100)
 
+def calculate_accessibility_score(stats):
+    """Higher is better: 100 means no detected issues."""
+    return max(0, 100 - calculate_impact_score(stats))
+
+def apply_issue_fixes_to_content(content, issues):
+    """
+    Apply scanner-proposed fixes by replacing first matching broken snippet per issue.
+    """
+    patched = content
+    applied_count = 0
+    for issue in issues:
+        broken = issue.get('broken_full') or issue.get('broken')
+        fix = issue.get('fix')
+        if not broken or not fix:
+            continue
+        if broken in patched:
+            patched = patched.replace(broken, fix, 1)
+            applied_count += 1
+    return patched, applied_count
+
 # ============================================================
 # HEALTH CHECK & STATIC FILES
 # ============================================================
@@ -534,7 +814,9 @@ def health_check():
         'status': 'healthy',
         'service': 'ScriptClean A11y Guard API',
         'version': '1.0.0',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'ibm_bob_api_configured': bool(IBM_BOB_API_KEY),
+        'watsonx_ready': watsonx_configured(),
     })
 
 
@@ -574,7 +856,9 @@ def index():
         'version': '1.0.0',
         'endpoints': {
             '/api/scan': 'POST - Scan code for accessibility issues',
+            '/api/scan-batch': 'POST - Scan multiple files for accessibility issues',
             '/api/scan-file': 'POST - Scan a file from test_samples',
+            '/api/apply-fixes': 'POST - Apply selected fixes and return patched files',
             '/api/samples': 'GET - List available test samples',
             '/api/export-report': 'POST - Export accessibility report',
             '/health': 'GET - Health check'
