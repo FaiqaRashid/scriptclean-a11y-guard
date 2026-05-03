@@ -79,7 +79,7 @@ body,html{font-family:var(--font);background:transparent;color:var(--ibm-gray-10
 .sc-progress-fill{height:100%;background:var(--ibm-blue);transition:width .4s ease}
 .sc-progress-status{font-size:11px;color:var(--ibm-gray-60);margin-top:5px;font-family:var(--mono)}
 
-.sc-summary-strip{display:flex;gap:1rem;margin-bottom:1.5rem}
+.sc-summary-strip{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
 .sc-stat{flex:1;padding:1rem;border:1px solid var(--ibm-gray-20);background:#fff}
 .sc-stat-num{font-size:28px;font-weight:300;line-height:1;margin-bottom:4px}
 .sc-stat-label{font-size:11px;color:var(--ibm-gray-60);text-transform:uppercase;letter-spacing:.4px}
