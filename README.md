@@ -221,7 +221,7 @@ scriptclean-a11y-guard/
 │   ├── requirements.txt
 │   ├── .env.example        # Template for keys (commit this)
 │   
-├── text_samples/           # Built-in sample files for demos
+├── test_samples/           # Built-in sample files for demos
 ├── reports/                # Exported JSON reports (created at runtime)
 ├── uploads/                # Reserved for uploads (created at runtime)
 └── README.md
