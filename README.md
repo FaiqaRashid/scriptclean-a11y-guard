@@ -12,7 +12,7 @@ ScriptClean is an intelligent accessibility auditing tool that scans HTML, PHP, 
 
 ---
 
-## The Impact
+## 🎯 The Impact
 
 **Turn a 40-hour manual audit into a 2-hour automated fix.**
 
@@ -20,7 +20,7 @@ Traditional accessibility audits are time-consuming and error-prone. ScriptClean
 
 ---
 
-## Features
+## ✨ Features
 
 ### One-Click Apply
 Apply accessibility fixes from the UI. Selected issues are merged back into file content via `/api/apply-fixes` so you can copy or save the patched source.
@@ -39,7 +39,7 @@ Reports include priority hints, estimated fix time, impact-style scoring, and WC
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
@@ -57,7 +57,7 @@ Reports include priority hints, estimated fix time, impact-style scoring, and WC
 
 ---
 
-## How IBM Bob / watsonx Powers This
+## ## 🤖 How IBM Bob / watsonx Powers This
 
 The scanner first detects issues with regex and structure rules. When watsonx is configured, `server/watsonx_bob.py` sends constrained prompts so the model can **refine** fix text (for example, richer `alt` descriptions) using the file’s context.
 
@@ -77,7 +77,7 @@ The pipeline considers filename, surrounding lines, and WCAG-oriented instructio
 
 ---
 
-## WCAG 2.1 Coverage
+## ♿ WCAG 2.1 Coverage
 
 ScriptClean’s local checks map to areas such as:
 
@@ -97,7 +97,7 @@ Each report includes simplified **Level A / AA / AAA** percentages derived from 
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -168,7 +168,7 @@ If you change the port and use `file://` for the UI, update `DEFAULT_DEV_PORT` i
 
 ---
 
-## Usage
+## 📖 Usage
 
 ### 1. Upload Source Files
 
@@ -179,6 +179,10 @@ Drag and drop files into the upload zone, or type a **project-relative path** (s
 ### 2. Configure Scan Options
 
 Toggle checks in the UI (they map to the `checks` IDs above).
+Select which accessibility checks to run:
+- ✅ Missing Alt Text
+- ✅ Missing ARIA Labels
+- ✅ Role & Structure
 
 ### 3. Run the Scan
 
@@ -203,7 +207,7 @@ Use in-app actions that read `bob_report` / insights (priority fix, estimates, s
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 scriptclean-a11y-guard/
@@ -216,7 +220,7 @@ scriptclean-a11y-guard/
 │   ├── watsonx_bob.py      # watsonx IAM + text generation for fix refinement
 │   ├── requirements.txt
 │   ├── .env.example        # Template for keys (commit this)
-│   └── .env                # Your secrets (gitignored — do not commit)
+│   
 ├── text_samples/           # Built-in sample files for demos
 ├── reports/                # Exported JSON reports (created at runtime)
 ├── uploads/                # Reserved for uploads (created at runtime)
@@ -225,7 +229,7 @@ scriptclean-a11y-guard/
 
 ---
 
-## API Reference
+## 🔌 API Reference
 
 ### Root
 
@@ -330,7 +334,8 @@ Persists JSON to **`reports/a11y_report_<timestamp>.json`** and returns `status`
 
 ---
 
-## Testing with Sample Files
+## 🧪 Testing with Sample Files
+
 
 | File | Issues Demonstrated |
 |------|-------------------|
@@ -346,7 +351,7 @@ Persists JSON to **`reports/a11y_report_<timestamp>.json`** and returns `status`
 
 ---
 
-## Design Philosophy: Double Diamond
+## 🎨 Design Philosophy: Double Diamond
 
 ScriptClean was built using the **Double Diamond** methodology from Human-Computer Interaction (HCI):
 
@@ -363,7 +368,7 @@ ScriptClean was built using the **Double Diamond** methodology from Human-Comput
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please open issues or pull requests.
 
@@ -378,7 +383,7 @@ Contributions are welcome! Please open issues or pull requests.
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License.
 
@@ -410,6 +415,6 @@ SOFTWARE.
 
 <div align="center">
 
-**Made with care for a more accessible web**
+**Made with care ❤️  for a more accessible web**
 
 </div>
