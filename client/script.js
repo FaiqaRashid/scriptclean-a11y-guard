@@ -17,6 +17,10 @@ let currentFilter = 'all';
 let fixedCount = 0;
 let scanDone = false;
 let queuedFiles = [];
+let queuedFilePayloads = [];
+let initialStats = { critical: 0, warning: 0, info: 0 };
+let baselineScore = 100;
+let currentScore = 100;
 
 // ============================================================
 // TAB NAVIGATION
@@ -54,6 +58,7 @@ function handleDrop(e) {
 
 function handleFiles(files) {
   queuedFiles = [...files];
+  queuedFilePayloads = [];
   const el = document.getElementById('files-queued');
   if (queuedFiles.length) {
     el.style.display = 'block';
@@ -69,6 +74,20 @@ function addPath() {
   const el = document.getElementById('files-queued');
   el.style.display = 'block';
   el.innerHTML = `<span style="font-family:var(--mono);font-size:11px;background:rgba(15,98,254,.1);padding:2px 8px;color:var(--ibm-blue)">${v}</span><span style="font-size:11px;color:var(--ibm-gray-60);margin-left:6px">Path queued</span>`;
+}
+
+function getSelectedChecks() {
+  const checks = [];
+  if (document.getElementById('opt-alt').classList.contains('checked')) checks.push('missing_alt');
+  if (document.getElementById('opt-aria').classList.contains('checked')) {
+    checks.push('missing_aria');
+    checks.push('form_labels');
+  }
+  if (document.getElementById('opt-contrast').classList.contains('checked')) {
+    checks.push('role_structure');
+    checks.push('heading_hierarchy');
+  }
+  return checks;
 }
 
 // ============================================================
@@ -123,19 +142,25 @@ async function startScan() {
 async function performActualScan() {
   try {
     let response;
+    const checks = getSelectedChecks();
     
     // Check if we have queued files
     if (queuedFiles.length > 0) {
-      // Read first file and scan it
-      const file = queuedFiles[0];
-      const content = await file.text();
-      
-      response = await fetch(`${API_BASE}/api/scan`, {
+      // Read all files and scan in one request
+      const filesPayload = await Promise.all(
+        queuedFiles.map(async (file) => ({
+          filename: file.name,
+          code: await file.text()
+        }))
+      );
+      queuedFilePayloads = filesPayload;
+
+      response = await fetch(`${API_BASE}/api/scan-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: content,
-          filename: file.name
+          files: filesPayload,
+          checks
         })
       });
     } else {
@@ -148,7 +173,8 @@ async function performActualScan() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: filename
+          filename: filename,
+          checks
         })
       });
     }
@@ -165,9 +191,26 @@ async function performActualScan() {
     
     // Update stats from server response
     if (data.stats) {
+      initialStats = {
+        critical: data.stats.critical || 0,
+        warning: data.stats.warning || 0,
+        info: data.stats.info || 0
+      };
       document.getElementById('stat-critical').textContent = data.stats.critical;
       document.getElementById('stat-warning').textContent = data.stats.warning;
       document.getElementById('stat-files').textContent = data.stats.files_scanned;
+    }
+
+    baselineScore = Number(data.score ?? 100);
+    currentScore = baselineScore;
+    document.getElementById('stat-score').textContent = `${currentScore}`;
+
+    if (Array.isArray(data.worst_files) && data.worst_files.length) {
+      const top = data.worst_files
+        .slice(0, 3)
+        .map(f => `${f.filename} (${f.issue_count})`)
+        .join(', ');
+      showNotification(`Top files to fix first: ${top}`, 'info');
     }
     
     showResults();
@@ -206,9 +249,14 @@ function showResults() {
 function updateStats() {
   const crit = currentIssues.filter(i => i.severity === 'critical' && !i.applied).length;
   const warn = currentIssues.filter(i => i.severity === 'warning' && !i.applied).length;
+  const info = currentIssues.filter(i => i.severity === 'info' && !i.applied).length;
+  const remainingImpact = (crit * 10) + (warn * 5) + info;
+  currentScore = Math.max(0, 100 - remainingImpact);
   document.getElementById('stat-critical').textContent = crit;
   document.getElementById('stat-warning').textContent = warn;
   document.getElementById('stat-fixed').textContent = fixedCount;
+  document.getElementById('stat-score').textContent = `${currentScore}`;
+  document.getElementById('score-delta').textContent = `${currentScore - baselineScore >= 0 ? '+' : ''}${currentScore - baselineScore}`;
 }
 
 function filterIssues(f, btn) {
@@ -328,6 +376,76 @@ async function exportBobReport() {
   } catch (error) {
     console.error('Export error:', error);
     showNotification('⚠ Export failed. Check console for details.', 'error');
+  }
+}
+
+function buildPatchedFilename(filename) {
+  const dot = filename.lastIndexOf('.');
+  if (dot === -1) return `${filename}.patched`;
+  return `${filename.slice(0, dot)}.patched${filename.slice(dot)}`;
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function downloadPatchedFiles() {
+  if (!scanDone || !currentIssues.length) {
+    showNotification('Run a scan first to generate fixable files.', 'warning');
+    return;
+  }
+
+  const issueMap = currentIssues.reduce((acc, issue) => {
+    if (!acc[issue.file]) acc[issue.file] = [];
+    if (issue.applied) acc[issue.file].push(issue);
+    return acc;
+  }, {});
+
+  const filesToPatch = [];
+
+  if (queuedFilePayloads.length) {
+    queuedFilePayloads.forEach(file => {
+      const selectedIssues = issueMap[file.filename] || [];
+      if (selectedIssues.length) {
+        filesToPatch.push({
+          filename: file.filename,
+          content: file.code,
+          issues: selectedIssues
+        });
+      }
+    });
+  }
+
+  if (!filesToPatch.length) {
+    showNotification('Apply at least one fix, then download patched files.', 'warning');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/apply-fixes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: filesToPatch })
+    });
+    if (!response.ok) throw new Error('Could not patch files');
+    const data = await response.json();
+
+    (data.patched_files || []).forEach(file => {
+      downloadTextFile(buildPatchedFilename(file.filename), file.content);
+    });
+
+    showNotification(`✓ Downloaded ${data.patched_files.length} patched file(s)`, 'success');
+  } catch (error) {
+    console.error('Patch download failed:', error);
+    showNotification('Failed to download patched files.', 'error');
   }
 }
 
