@@ -8,32 +8,38 @@
 
 **AI-Powered Accessibility Auditor Built on IBM Bob**
 
-ScriptClean is an intelligent accessibility auditing tool that scans HTML, PHP, and JavaScript files to identify and fix WCAG violations. Powered by IBM Bob's repository-wide context analysis, it transforms manual accessibility audits into automated, meaningful fixes.
+ScriptClean is an intelligent accessibility auditing tool that scans HTML, PHP, and JavaScript files to identify and fix WCAG violations. Powered by IBM watsonx.ai text generation (via your IBM Cloud API key and project), it can refine heuristic fixes using repository context—not just generic placeholders.
 
 ---
 
-## 🎯 The Impact
+## The Impact
 
 **Turn a 40-hour manual audit into a 2-hour automated fix.**
 
-Traditional accessibility audits are time-consuming and error-prone. ScriptClean leverages AI to analyze your entire codebase, identify barriers, and generate context-aware fixes that actually make sense—not just generic placeholders.
+Traditional accessibility audits are time-consuming and error-prone. ScriptClean combines fast local scanning with optional watsonx refinement to analyze your code, surface barriers, and suggest context-aware fixes.
 
 ---
 
-## ✨ Features
+## Features
 
 ### One-Click Apply
-Apply accessibility fixes instantly with a single click. No manual code editing required—ScriptClean integrates fixes directly into your workflow.
+Apply accessibility fixes from the UI. Selected issues are merged back into file content via `/api/apply-fixes` so you can copy or save the patched source.
 
 ### Side-by-Side Diff View
-Compare broken code with Bob's intelligent fixes in a clear, visual interface. Understand exactly what changes before applying them.
+Compare broken snippets with suggested fixes before applying.
 
-### Bob Priority Recommendation
-Let IBM Bob analyze your issues and recommend which fix to apply first for maximum accessibility impact. Bob considers severity, user impact, and fix complexity to guide your remediation strategy.
+### Batch upload
+Drag-and-drop multiple files; the client calls `/api/scan-batch` so everything is analyzed in one round trip.
+
+### Bob / watsonx refinement (optional)
+With `IBM_BOB_API_KEY` and `WATSONX_PROJECT_ID` set in `server/.env`, scan results are passed through watsonx to improve fix strings. Without those variables, the tool still runs using local heuristics only.
+
+### Priority and reporting
+Reports include priority hints, estimated fix time, impact-style scoring, and WCAG level summaries. Export saves structured JSON under `reports/` on the server.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
@@ -41,7 +47,7 @@ Let IBM Bob analyze your issues and recommend which fix to apply first for maxim
 | **Frontend** | Vanilla JavaScript (no frameworks) |
 | **Design System** | IBM Carbon Design System |
 | **Methodology** | Double Diamond (HCI) |
-| **AI Engine** | IBM Bob |
+| **AI refinement** | IBM watsonx.ai (Granite instruct model by default) |
 
 ### Why These Choices?
 
@@ -51,9 +57,9 @@ Let IBM Bob analyze your issues and recommend which fix to apply first for maxim
 
 ---
 
-## 🤖 How IBM Bob Powers This
+## How IBM Bob / watsonx Powers This
 
-IBM Bob doesn't just scan for missing attributes—it understands your entire repository context to generate **meaningful, descriptive fixes**.
+The scanner first detects issues with regex and structure rules. When watsonx is configured, `server/watsonx_bob.py` sends constrained prompts so the model can **refine** fix text (for example, richer `alt` descriptions) using the file’s context.
 
 ### Example: Context-Aware Alt Text
 
@@ -62,46 +68,40 @@ IBM Bob doesn't just scan for missing attributes—it understands your entire re
 <img src="logo.png" alt="image">
 ```
 
-**ScriptClean with Bob:**
+**ScriptClean (with refinement):**
 ```html
 <img src="logo.png" alt="Company logo showcasing brand identity">
 ```
 
-Bob analyzes:
-- File names and directory structure
-- Surrounding HTML context
-- Common patterns in your codebase
-- WCAG best practices
-
-This results in fixes that improve accessibility **and** SEO, rather than just checking compliance boxes.
+The pipeline considers filename, surrounding lines, and WCAG-oriented instructions baked into the scanner and prompts.
 
 ---
 
-## ♿ WCAG 2.1 Coverage
+## WCAG 2.1 Coverage
 
-ScriptClean audits against the following WCAG 2.1 Success Criteria:
+ScriptClean’s local checks map to areas such as:
 
 | Criterion | Level | What ScriptClean Checks |
 |-----------|-------|------------------------|
-| **1.1.1** Non-text Content | A | All images have meaningful alt attributes |
-| **4.1.2** Name, Role, Value | A | ARIA labels on buttons, forms, and interactive elements |
-| **1.3.1** Info & Relationships | A | Semantic structure with proper landmark roles (`<main>`, `<nav>`, etc.) |
-| **2.4.6** Headings & Labels | AA | Logical heading hierarchy (H1 → H2 → H3, no skipped levels) |
+| **1.1.1** Non-text Content | A | Images missing meaningful `alt` |
+| **4.1.2** Name, Role, Value | A | Interactive elements missing labels / ARIA where applicable |
+| **1.3.1** Info & Relationships | A | Landmark / role structure |
+| **2.4.6** Headings & Labels | AA | Heading hierarchy (skipped levels, etc.) |
+| **3.3.2** Labels or Instructions | A | Form inputs without labels or `aria-label` |
+
+**Scanner check IDs** (optional `checks` array in API bodies): `missing_alt`, `missing_aria`, `role_structure`, `heading_hierarchy`, `form_labels`. If omitted, all of the above run.
 
 ### Compliance Scoring
 
-After each scan, ScriptClean provides:
-- **Level A Compliance**: Percentage of basic accessibility requirements met
-- **Level AA Compliance**: Percentage of enhanced accessibility requirements met
-- **Level AAA Compliance**: Percentage of advanced accessibility requirements met
+Each report includes simplified **Level A / AA / AAA** percentages derived from the current issue set, plus an overall **score** (higher is better—fewer detected issues).
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10+ recommended (3.8+ should work)
 - Modern web browser (Chrome, Firefox, Edge, Safari)
 
 ### Installation
@@ -112,228 +112,273 @@ After each scan, ScriptClean provides:
    cd scriptclean-a11y-guard
    ```
 
-2. **Install Python dependencies**
+2. **Create a virtual environment (recommended)**
+   ```bash
+   python -m venv .venv
+   # Windows PowerShell
+   .\.venv\Scripts\Activate.ps1
+   # macOS/Linux
+   source .venv/bin/activate
+   ```
+
+3. **Install Python dependencies**
    ```bash
    pip install -r server/requirements.txt
    ```
 
-3. **Start the server**
+4. **Configure environment (optional but needed for watsonx refinement)**
+   ```bash
+   copy server\.env.example server\.env
+   # macOS/Linux: cp server/.env.example server/.env
+   ```
+   Edit `server/.env` and set at least `IBM_BOB_API_KEY` and `WATSONX_PROJECT_ID`. Never commit `.env` (it is gitignored).
+
+5. **Start the server**
    ```bash
    python server/app.py
    ```
-   
-   Server runs on `http://127.0.0.1:5050` by default.
 
-4. **Open the web interface**
-   
-   Navigate to: `http://127.0.0.1:5050/app/`
+   The server listens on **`http://127.0.0.1:5050`** by default (`0.0.0.0` bind). On first run it creates **`uploads/`** and **`reports/`** if they are missing.
+
+6. **Open the web interface**
+
+   Use the same origin as the API (so asset URLs resolve correctly):
+
+   **`http://127.0.0.1:5050/app/`**
+
+   Avoid opening `client/index.html` as `file://` unless you use the default port **5050**; the client falls back to `http://127.0.0.1:5050` for API calls in that mode.
 
 ### Custom Port Configuration
 
-If port 5050 is in use, set a custom port:
+Port **5000** is avoided by default (e.g. macOS AirPlay). Override with:
 
-```bash
+```powershell
 # Windows PowerShell
 $env:A11Y_GUARD_PORT="8080"
 python server/app.py
+```
 
+```bash
 # macOS/Linux
 export A11Y_GUARD_PORT=8080
 python server/app.py
 ```
 
+If you change the port and use `file://` for the UI, update `DEFAULT_DEV_PORT` in `client/script.js` or always use `/app/` on the server.
+
 ---
 
-## 📖 Usage
+## Usage
 
 ### 1. Upload Source Files
 
-Drag and drop HTML, PHP, or JavaScript files into the upload zone, or click to browse your project folder.
+Drag and drop files into the upload zone, or type a **project-relative path** (see below).
 
-**Supported file types:** `.html`, `.php`, `.js`, `.jsx`, `.ts`
+**Typical extensions:** `.html`, `.php`, `.js` (samples list uses these; batch upload sends raw text for any dropped file).
 
 ### 2. Configure Scan Options
 
-Select which accessibility checks to run:
-- ✅ Missing Alt Text
-- ✅ Missing ARIA Labels
-- ✅ Role & Structure
+Toggle checks in the UI (they map to the `checks` IDs above).
 
 ### 3. Run the Scan
 
-Click **"Run A11y Scan with Bob →"** to start the analysis. Bob will:
-- Parse your code structure
-- Identify accessibility barriers
-- Generate context-aware fixes
-- Prioritize issues by severity
+- **With uploaded files:** the client posts to **`/api/scan-batch`**.
+- **With path only:** the client posts to **`/api/scan-file`** with `filename` (e.g. `bad_images.php` resolves under `text_samples/`, or use a path **inside the repo**).
 
 ### 4. Review Results
 
-Switch to the **Report** tab to see:
-- **Critical Issues**: Barriers that prevent access (e.g., missing alt text)
-- **Warnings**: Issues that create friction (e.g., skipped heading levels)
-- **Fixed**: Issues you've already resolved
+Use the **Report** tab for severity breakdown, issues, and Bob report metadata.
 
 ### 5. Apply Fixes
 
-For each issue:
-- Expand the card to see side-by-side comparison
-- Review Bob's suggested fix
-- Click **"Apply Fix"** to mark as resolved
-- Export the updated code
+Use the UI actions to apply fixes; the client can request patched content via **`/api/apply-fixes`**.
 
 ### 6. Export Reports
 
-Generate a comprehensive WCAG 2.1 compliance report:
-- Click **"Generate PDF Report ↗"**
-- JSON report downloads automatically
-- Share with your team or clients
+**Export JSON Report** calls **`/api/export-report`**. The server writes `a11y_report_YYYYMMDD_HHMMSS.json` under **`reports/`** and returns JSON with `filename` and `path`. There is no PDF export in this repo—the deliverable is JSON.
 
-### 7. Get Bob's Priority Recommendation
+### 7. Priority and “Ask Bob”
 
-Not sure where to start? Click **"Ask Bob for priority ↗"** to see:
-- Which issue to fix first
-- Estimated fix time
-- Impact score (0-100)
-- Current WCAG compliance levels
+Use in-app actions that read `bob_report` / insights (priority fix, estimates, scores) from the last scan response.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 scriptclean-a11y-guard/
 ├── client/
 │   ├── index.html          # Web interface
-│   ├── script.js           # Client-side logic
-│   └── style.css           # IBM Carbon Design styles
+│   ├── script.js           # Client-side logic (API_BASE, batch vs path scan)
+│   └── style.css           # IBM Carbon-oriented styles
 ├── server/
-│   ├── app.py              # Flask API server
-│   └── requirements.txt    # Python dependencies
-├── text_samples/           # Sample files for testing
-│   ├── bad_images.php
-│   ├── broken_nav.html
-│   ├── Contact_form.html
-│   ├── dashboard_header.html
-│   ├── new_card.php
-│   └── travello.html
-├── reports/                # Generated compliance reports
-├── uploads/                # User-uploaded files
+│   ├── app.py              # Flask API + scanner + static /app routes
+│   ├── watsonx_bob.py      # watsonx IAM + text generation for fix refinement
+│   ├── requirements.txt
+│   ├── .env.example        # Template for keys (commit this)
+│   └── .env                # Your secrets (gitignored — do not commit)
+├── text_samples/           # Built-in sample files for demos
+├── reports/                # Exported JSON reports (created at runtime)
+├── uploads/                # Reserved for uploads (created at runtime)
 └── README.md
 ```
 
 ---
 
-## 🔌 API Reference
+## API Reference
+
+### Root
+
+```http
+GET /
+```
+
+Returns JSON describing the service and endpoint map (same information as in `app.py`).
 
 ### Health Check
+
 ```http
 GET /health
 ```
 
-Returns server status and version information.
+Example fields: `status`, `service`, `version`, `timestamp`, `ibm_bob_api_configured` (non-empty API key), `watsonx_ready` (key **and** `WATSONX_PROJECT_ID` set).
 
 ### Scan Code
+
 ```http
 POST /api/scan
 Content-Type: application/json
 
 {
   "code": "<html>...</html>",
-  "filename": "index.html"
+  "filename": "index.html",
+  "checks": ["missing_alt", "missing_aria"]
 }
 ```
 
-Scans provided code and returns accessibility issues.
+`checks` is optional; omit to run all checks.
 
-### Scan File
+### Scan File (sample name or repo-relative path)
+
 ```http
 POST /api/scan-file
 Content-Type: application/json
 
 {
-  "filename": "bad_images.php"
+  "filename": "bad_images.php",
+  "checks": []
 }
 ```
 
-Scans a file from the `text_samples` directory.
+- Bare filename → resolved under **`text_samples/`**.
+- Path → must stay inside the project root (directory traversal blocked).
+
+### Scan Batch
+
+```http
+POST /api/scan-batch
+Content-Type: application/json
+
+{
+  "files": [
+    { "filename": "a.html", "code": "<html>...</html>" },
+    { "filename": "b.php", "code": "<?php ..." }
+  ],
+  "checks": ["form_labels"]
+}
+```
+
+### Apply Fixes
+
+```http
+POST /api/apply-fixes
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "filename": "page.html",
+      "content": "<html>...</html>",
+      "issues": [ { "broken_full": "...", "fix": "..." } ]
+    }
+  ]
+}
+```
+
+Returns `patched_files` with updated `content` and `applied_count`.
 
 ### List Samples
+
 ```http
 GET /api/samples
 ```
 
-Returns available test sample files.
+Lists `.html`, `.php`, `.js` files in `text_samples/`.
 
 ### Export Report
+
 ```http
 POST /api/export-report
 Content-Type: application/json
 
 {
-  "report": { ... }
+  "report": { }
 }
 ```
 
-Exports accessibility report as JSON.
+Persists JSON to **`reports/a11y_report_<timestamp>.json`** and returns `status`, `filename`, and server `path`.
 
 ---
 
-## 🧪 Testing with Sample Files
-
-ScriptClean includes sample files with common accessibility issues:
+## Testing with Sample Files
 
 | File | Issues Demonstrated |
 |------|-------------------|
-| `bad_images.php` | Missing alt attributes on images |
-| `broken_nav.html` | Missing ARIA labels on navigation |
-| `Contact_form.html` | Form inputs without labels |
-| `dashboard_header.html` | Heading hierarchy problems |
+| `bad_images.php` | Missing `alt` on images |
+| `broken_nav.html` | Navigation / ARIA patterns |
+| `Contact_form.html` | Form labeling |
+| `dashboard_header.html` | Heading structure |
+| `new_card.php`, `travello.html` | Additional demo content |
 
-To test:
-1. Start the server
-2. Open the web interface
-3. Click **"Run A11y Scan with Bob →"** (scans `bad_images.php` by default)
-4. Or enter a specific filename in the path input
+1. Start the server  
+2. Open `http://127.0.0.1:5050/app/`  
+3. Run a scan with default path (defaults to **`bad_images.php`**) or pick a sample name from **`GET /api/samples`**
 
 ---
 
-## 🎨 Design Philosophy: Double Diamond
+## Design Philosophy: Double Diamond
 
 ScriptClean was built using the **Double Diamond** methodology from Human-Computer Interaction (HCI):
 
 ### Diamond 1: Discover & Define
-- **Research**: Interviewed developers and accessibility specialists
-- **Problem**: Manual audits are slow, expensive, and produce generic fixes
-- **Insight**: AI can understand context to generate meaningful solutions
+- **Research**: Developer and accessibility workflows  
+- **Problem**: Manual audits are slow and generic fixes help little  
+- **Insight**: Combine fast rules with optional LLM refinement for better fix text  
 
 ### Diamond 2: Develop & Deliver
-- **Prototype**: Built MVP with core scanning features
-- **Test**: Validated with real-world codebases
-- **Iterate**: Added Bob priority recommendations and one-click fixes
-- **Launch**: Deployed production-ready tool
-
-This user-centered approach ensures ScriptClean solves real problems, not imagined ones.
+- **Prototype**: Scanner + Flask API + Carbon-styled UI  
+- **Test**: Sample corpus under `text_samples/`  
+- **Iterate**: Batch scans, apply-fix pipeline, watsonx integration  
+- **Launch**: Single-command local run for hackathon demos  
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome! Please open issues or pull requests.
 
 ### Development Setup
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Test thoroughly
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+1. Fork the repository  
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)  
+3. Make your changes  
+4. Test with `python server/app.py` and `http://127.0.0.1:5050/app/`  
+5. Commit and push  
+6. Open a Pull Request  
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
 
@@ -365,6 +410,6 @@ SOFTWARE.
 
 <div align="center">
 
-**Made with ❤️ and ♿ for a more accessible web**
+**Made with care for a more accessible web**
 
 </div>
