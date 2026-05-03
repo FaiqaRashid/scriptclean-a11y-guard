@@ -1,6 +1,9 @@
 # ScriptClean A11y Guard - Python Dependencies
 # Install with: pip install -r requirements.txt
 
+# Environment
+python-dotenv>=1.0.0
+
 # Core Web Framework
 flask>=3.0.0
 flask-cors>=4.0.0
